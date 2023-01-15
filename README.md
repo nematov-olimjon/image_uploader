@@ -3,9 +3,11 @@ This app will upload image to AWS S3 and MySQL. AWS S3 will store the image itse
 
 ## Requirements
 - Python 3.8*
+- python-virtualenv
 
 ## Clone the repo
-> `git clone https://github.com/nematov-olimjon/image_uploader.git`
+- > `git clone https://github.com/nematov-olimjon/image_uploader.git`
+- > `cd image_uploader`
 
 ## Installation
 - Install python environment
