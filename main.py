@@ -1,6 +1,9 @@
 import time
 from fastapi import FastAPI, status, HTTPException, Depends, File, UploadFile, Form
 from database import Base, engine, SessionLocal
+from pydantic import EmailStr
+from subscription import subscribe_email, unsubscribe_email, \
+    send_message_to_sqs
 from utils import upload_file_to_s3, delete_file_from_s3
 from sqlalchemy.orm import Session
 import models
@@ -46,6 +49,10 @@ async def create_upload_file(file: UploadFile, name: str = Form(), session: Sess
     session.commit()
     session.refresh(image)
 
+    send_message_to_sqs(f"Image name: {name}\nImage size: {image_size}\n"
+                        f"File extension: {file_extension}\n"
+                        f"Updated at: {updated_at}")
+
     os.remove(file_location)
 
     return image
@@ -57,6 +64,18 @@ async def delete_file(name: str, session: Session = Depends(get_session)):
     if image:
         session.delete(image)
         session.commit()
-        delete_file_from_s3(name)
+        await delete_file_from_s3(name)
     else:
         raise HTTPException(status_code=400, detail=f"Image item with name '{name}' not found")
+
+
+@app.post("/subscribe/{email}")
+def subscribe_for_notification(email: EmailStr):
+    if subscribe_email(email)["SubscriptionArn"]:
+        return HTTPException(status_code=200)
+    return HTTPException(status_code=400, detail="Can't subscribe")
+
+
+@app.delete("/unsubscribe/{email}")
+def unsubscribe_for_notification(email: EmailStr):
+    unsubscribe_email(email)
